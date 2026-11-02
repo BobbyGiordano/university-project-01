@@ -1,9 +1,13 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const prisma = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { logAudit } = require('../middleware/audit');
+const { createUploader } = require('../middleware/upload');
 
 const router = express.Router();
+const upload = createUploader('motorcycles');
 
 // GET /api/motorcycles
 router.get('/', requireAuth, async (req, res) => {
@@ -28,6 +32,9 @@ router.get('/', requireAuth, async (req, res) => {
       where,
       orderBy: [{ brand: 'asc' }, { model: 'asc' }, { yearStart: 'desc' }],
       include: {
+        images: {
+          orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+        },
         _count: {
           select: {
             requirements: true,
@@ -51,10 +58,19 @@ router.get('/:id', requireAuth, async (req, res) => {
     const motorcycle = await prisma.motorcycleType.findUnique({
       where: { id },
       include: {
+        images: {
+          orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+        },
         requirements: {
           include: {
             boltPosition: true,
-            boltSpec: true,
+            boltSpec: {
+              include: {
+                images: {
+                  orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+                },
+              },
+            },
           },
           orderBy: [
             { boltPosition: { sortOrder: 'asc' } },
@@ -64,7 +80,15 @@ router.get('/:id', requireAuth, async (req, res) => {
         packages: {
           include: {
             items: {
-              include: { boltSpec: true },
+              include: {
+                boltSpec: {
+                  include: {
+                    images: {
+                      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -119,6 +143,9 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
         notes: notes ? notes.trim() : null,
         isActive: true,
       },
+      include: {
+        images: true,
+      },
     });
 
     await logAudit({
@@ -157,6 +184,11 @@ router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
         displayName,
         notes: notes ? notes.trim() : null,
         ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+      },
+      include: {
+        images: {
+          orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+        },
       },
     });
 
@@ -204,5 +236,182 @@ router.patch('/:id/deactivate', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-module.exports = router;
+// POST /api/motorcycles/:id/images (Admin only)
+// Supports multi-file upload via multipart/form-data or JSON with { url, caption, isPrimary }
+router.post('/:id/images', requireAuth, requireAdmin, (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Gagal mengunggah foto.' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const motorcycleTypeId = parseInt(req.params.id, 10);
+    const motorcycle = await prisma.motorcycleType.findUnique({
+      where: { id: motorcycleTypeId },
+      include: { images: true },
+    });
 
+    if (!motorcycle) {
+      return res.status(404).json({ error: 'Tipe motor tidak ditemukan.' });
+    }
+
+    const createdImages = [];
+    const hasExistingImages = motorcycle.images.length > 0;
+
+    // 1. If files were uploaded via multipart/form-data
+    if (req.files && req.files.length > 0) {
+      const caption = req.body.caption || null;
+      for (let i = 0; i < req.files.length; i++) {
+        const file = req.files[i];
+        const url = `/uploads/motorcycles/${file.filename}`;
+        const isPrimary = !hasExistingImages && i === 0;
+
+        const img = await prisma.motorcycleImage.create({
+          data: {
+            motorcycleTypeId,
+            url,
+            caption: Array.isArray(caption) ? caption[i] : caption,
+            isPrimary,
+          },
+        });
+        createdImages.push(img);
+      }
+    } else if (req.body.url) {
+      // 2. Direct URL provided in JSON or form-data
+      const { url, caption, isPrimary } = req.body;
+      const shouldBePrimary = Boolean(isPrimary) || !hasExistingImages;
+
+      if (shouldBePrimary && hasExistingImages) {
+        await prisma.motorcycleImage.updateMany({
+          where: { motorcycleTypeId },
+          data: { isPrimary: false },
+        });
+      }
+
+      const img = await prisma.motorcycleImage.create({
+        data: {
+          motorcycleTypeId,
+          url: url.trim(),
+          caption: caption ? caption.trim() : null,
+          isPrimary: shouldBePrimary,
+        },
+      });
+      createdImages.push(img);
+    } else {
+      return res.status(400).json({ error: 'Tidak ada file gambar atau URL yang dikirim.' });
+    }
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'CREATE',
+      entity: 'MOTORCYCLE',
+      entityId: motorcycleTypeId,
+      detail: `Menambahkan ${createdImages.length} foto untuk motor ${motorcycle.displayName}`,
+    });
+
+    const allImages = await prisma.motorcycleImage.findMany({
+      where: { motorcycleTypeId },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    res.status(201).json(allImages);
+  } catch (error) {
+    console.error('Error adding motorcycle images:', error);
+    res.status(500).json({ error: 'Gagal menambahkan foto motor.' });
+  }
+});
+
+// DELETE /api/motorcycles/:id/images/:imageId (Admin only)
+router.delete('/:id/images/:imageId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const motorcycleTypeId = parseInt(req.params.id, 10);
+    const imageId = parseInt(req.params.imageId, 10);
+
+    const image = await prisma.motorcycleImage.findFirst({
+      where: { id: imageId, motorcycleTypeId },
+    });
+
+    if (!image) {
+      return res.status(404).json({ error: 'Foto motor tidak ditemukan.' });
+    }
+
+    await prisma.motorcycleImage.delete({ where: { id: imageId } });
+
+    // If local file in uploads, unlink it
+    if (image.url.startsWith('/uploads/')) {
+      const localFilePath = path.join(__dirname, '../..', image.url);
+      if (fs.existsSync(localFilePath)) {
+        try {
+          fs.unlinkSync(localFilePath);
+        } catch (unlinkErr) {
+          console.warn('Failed to delete physical image file:', unlinkErr.message);
+        }
+      }
+    }
+
+    // If deleted image was primary, set another image as primary if exists
+    if (image.isPrimary) {
+      const remaining = await prisma.motorcycleImage.findFirst({
+        where: { motorcycleTypeId },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (remaining) {
+        await prisma.motorcycleImage.update({
+          where: { id: remaining.id },
+          data: { isPrimary: true },
+        });
+      }
+    }
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'DELETE',
+      entity: 'MOTORCYCLE',
+      entityId: motorcycleTypeId,
+      detail: `Menghapus foto #${imageId} dari motor ID ${motorcycleTypeId}`,
+    });
+
+    const allImages = await prisma.motorcycleImage.findMany({
+      where: { motorcycleTypeId },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    res.json(allImages);
+  } catch (error) {
+    console.error('Error deleting motorcycle image:', error);
+    res.status(500).json({ error: 'Gagal menghapus foto motor.' });
+  }
+});
+
+// PATCH /api/motorcycles/:id/images/:imageId/primary (Admin only)
+router.patch('/:id/images/:imageId/primary', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const motorcycleTypeId = parseInt(req.params.id, 10);
+    const imageId = parseInt(req.params.imageId, 10);
+
+    await prisma.$transaction([
+      prisma.motorcycleImage.updateMany({
+        where: { motorcycleTypeId },
+        data: { isPrimary: false },
+      }),
+      prisma.motorcycleImage.update({
+        where: { id: imageId },
+        data: { isPrimary: true },
+      }),
+    ]);
+
+    const allImages = await prisma.motorcycleImage.findMany({
+      where: { motorcycleTypeId },
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    res.json(allImages);
+  } catch (error) {
+    console.error('Error setting primary image:', error);
+    res.status(500).json({ error: 'Gagal mengatur foto utama motor.' });
+  }
+});
+
+module.exports = router;

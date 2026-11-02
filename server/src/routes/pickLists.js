@@ -16,6 +16,11 @@ router.post('/generate', requireAuth, async (req, res) => {
     const mId = parseInt(motorcycleTypeId, 10);
     const motorcycle = await prisma.motorcycleType.findUnique({
       where: { id: mId },
+      include: {
+        images: {
+          orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+        },
+      },
     });
 
     if (!motorcycle || !motorcycle.isActive) {
@@ -32,7 +37,15 @@ router.post('/generate', requireAuth, async (req, res) => {
         where: { id: pId },
         include: {
           items: {
-            include: { boltSpec: true },
+            include: {
+              boltSpec: {
+                include: {
+                  images: {
+                    orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+                  },
+                },
+              },
+            },
           },
         },
       });
@@ -51,7 +64,13 @@ router.post('/generate', requireAuth, async (req, res) => {
       where: { motorcycleTypeId: mId },
       include: {
         boltPosition: true,
-        boltSpec: true,
+        boltSpec: {
+          include: {
+            images: {
+              orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+            },
+          },
+        },
       },
       orderBy: [
         { boltPosition: { sortOrder: 'asc' } },
@@ -123,6 +142,8 @@ router.post('/generate', requireAuth, async (req, res) => {
       finish: entry.boltSpec.finish,
       totalQuantity: entry.quantity,
       positionsSummary: entry.positions ? entry.positions.join(', ') : (entry.notes ? entry.notes.join(', ') : ''),
+      images: entry.boltSpec.images || [],
+      boltSpec: entry.boltSpec,
     }));
 
     // Sort consolidated totals by diameter, length, headType
@@ -149,6 +170,7 @@ router.post('/generate', requireAuth, async (req, res) => {
         brand: motorcycle.brand,
         model: motorcycle.model,
         variant: motorcycle.variant,
+        images: motorcycle.images || [],
       },
       package: selectedPackage
         ? {
@@ -274,13 +296,27 @@ router.get('/sessions/:id', requireAuth, async (req, res) => {
     const session = await prisma.pickSession.findUnique({
       where: { id },
       include: {
-        motorcycleType: true,
+        motorcycleType: {
+          include: {
+            images: {
+              orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+            },
+          },
+        },
         package: true,
         creator: {
           select: { id: true, username: true, name: true },
         },
         items: {
-          include: { boltSpec: true },
+          include: {
+            boltSpec: {
+              include: {
+                images: {
+                  orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+                },
+              },
+            },
+          },
           orderBy: { id: 'asc' },
         },
       },

@@ -176,7 +176,7 @@
               </span>
             </div>
             <p class="text-[11px] text-zinc-400 font-mono mt-0.5">
-              Staf: {{ s.creator.name }} &bull; {{ new Date(s.createdAt).toLocaleDateString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) }}
+              Staf: {{ s.creator.name }} &bull; {{ formatDateTime(s.createdAt) }}
             </p>
           </div>
 
@@ -206,6 +206,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { formatDateTime } from '../utils/date';
 
 const auth = useAuthStore();
 const motorcycles = ref([]);

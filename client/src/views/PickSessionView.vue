@@ -30,30 +30,40 @@
       <!-- Session Header -->
       <div class="border-b border-zinc-100 dark:border-zinc-800/80 pb-5">
         <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div>
-            <div class="flex items-center space-x-2 mb-1.5">
-              <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-zinc-700">
-                SESI #{{ session.id }}
-              </span>
-              <span
-                class="text-[10px] font-mono px-2 py-0.5 rounded border"
-                :class="[session.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700']"
-              >
-                {{ session.status === 'COMPLETED' ? 'SELESAI LENGKAP' : 'SEDANG DIAMBIL' }}
-              </span>
+          <div class="flex items-center space-x-3.5">
+            <div
+              v-if="session.motorcycleType.images && session.motorcycleType.images.length > 0"
+              @click="openMotorPhoto(session.motorcycleType)"
+              class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shrink-0 cursor-pointer hover:border-zinc-400 transition-all"
+              title="Lihat foto motor"
+            >
+              <img :src="session.motorcycleType.images[0].url" :alt="session.motorcycleType.displayName" class="w-full h-full object-cover" />
             </div>
+            <div>
+              <div class="flex items-center space-x-2 mb-1.5">
+                <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-zinc-700">
+                  SESI #{{ session.id }}
+                </span>
+                <span
+                  class="text-[10px] font-mono px-2 py-0.5 rounded border"
+                  :class="[session.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800 text-zinc-300 border-zinc-700']"
+                >
+                  {{ session.status === 'COMPLETED' ? 'SELESAI LENGKAP' : 'SEDANG DIAMBIL' }}
+                </span>
+              </div>
 
-            <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-              {{ session.motorcycleType.displayName }}
-            </h1>
-            <p v-if="session.package" class="text-xs text-zinc-400 font-mono mt-0.5">
-              {{ session.package.name }}
-            </p>
+              <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                {{ session.motorcycleType.displayName }}
+              </h1>
+              <p v-if="session.package" class="text-xs text-zinc-400 font-mono mt-0.5">
+                {{ session.package.name }}
+              </p>
+            </div>
           </div>
 
           <div class="text-left sm:text-right text-xs text-zinc-400 font-mono">
             <p>Staf: <span class="text-zinc-200">{{ session.creator.name }}</span></p>
-            <p class="text-[11px] mt-0.5">{{ new Date(session.createdAt).toLocaleDateString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) }}</p>
+            <p class="text-[11px] mt-0.5">{{ formatDateTime(session.createdAt) }}</p>
           </div>
         </div>
 
@@ -102,6 +112,16 @@
               </svg>
             </div>
 
+            <!-- Bolt Photo Thumbnail -->
+            <div
+              v-if="item.boltSpec?.images && item.boltSpec.images.length > 0"
+              @click.stop="openBoltPhoto(item.boltSpec)"
+              class="w-10 h-10 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 transition-all cursor-pointer shrink-0"
+              title="Ketuk untuk melihat foto baut"
+            >
+              <img :src="item.boltSpec.images[0].url" :alt="item.boltSpec.code" class="w-full h-full object-cover" />
+            </div>
+
             <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="font-mono text-xs font-bold text-zinc-900 dark:text-zinc-100" :class="{ 'line-through text-zinc-500': item.checked }">
@@ -147,6 +167,22 @@
       </div>
 
     </div>
+
+    <!-- PHOTO GALLERY MODAL -->
+    <PhotoGalleryModal
+      v-if="galleryModal.isOpen"
+      :is-open="galleryModal.isOpen"
+      :category-title="galleryModal.categoryTitle"
+      :item-title="galleryModal.itemTitle"
+      :item-subtitle="galleryModal.itemSubtitle"
+      :images="galleryModal.images"
+      :can-manage="false"
+      :upload-endpoint="''"
+      :delete-endpoint-base="''"
+      :primary-endpoint-base="''"
+      :auth-headers="auth.authHeaders"
+      @close="galleryModal.isOpen = false"
+    />
   </div>
 </template>
 
@@ -154,10 +190,40 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import PhotoGalleryModal from '../components/PhotoGalleryModal.vue';
+import { formatDateTime } from '../utils/date';
 
 const route = useRoute();
 const auth = useAuthStore();
 const session = ref(null);
+
+const galleryModal = ref({
+  isOpen: false,
+  categoryTitle: '',
+  itemTitle: '',
+  itemSubtitle: '',
+  images: [],
+});
+
+const openMotorPhoto = (motor) => {
+  galleryModal.value = {
+    isOpen: true,
+    categoryTitle: 'Foto Tipe Sepeda Motor',
+    itemTitle: motor.displayName,
+    itemSubtitle: `${motor.brand} ${motor.model}`,
+    images: motor.images || [],
+  };
+};
+
+const openBoltPhoto = (boltSpec) => {
+  galleryModal.value = {
+    isOpen: true,
+    categoryTitle: 'Foto Spesifikasi Baut Titanium',
+    itemTitle: boltSpec.code,
+    itemSubtitle: `${boltSpec.headType || ''} M${Number(boltSpec.diameterMm)} × ${Number(boltSpec.lengthMm)}mm • ${boltSpec.finish || ''}`,
+    images: boltSpec.images || [],
+  };
+};
 
 const loadSession = async () => {
   try {

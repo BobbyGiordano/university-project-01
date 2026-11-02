@@ -35,9 +35,23 @@ model MotorcycleType {
   requirements MotorBoltRequirement[]
   packages     Package[]
   pickSessions PickSession[]
+  images       MotorcycleImage[]
 
   @@unique([brand, model, variant, yearStart, yearEnd])
   @@map("motorcycle_types")
+}
+
+model MotorcycleImage {
+  id               Int            @id @default(autoincrement())
+  motorcycleTypeId Int            @map("motorcycle_type_id")
+  url              String
+  caption          String?
+  isPrimary        Boolean        @default(false) @map("is_primary")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  motorcycleType   MotorcycleType @relation(fields: [motorcycleTypeId], references: [id], onDelete: Cascade)
+
+  @@index([motorcycleTypeId])
+  @@map("motorcycle_images")
 }
 
 model BoltPosition {
@@ -64,8 +78,22 @@ model BoltSpec {
   requirements MotorBoltRequirement[]
   packageItems PackageItem[]
   sessionItems PickSessionItem[]
+  images       BoltImage[]
 
   @@map("bolt_specs")
+}
+
+model BoltImage {
+  id         Int      @id @default(autoincrement())
+  boltSpecId Int      @map("bolt_spec_id")
+  url        String
+  caption    String?
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at")
+  boltSpec   BoltSpec @relation(fields: [boltSpecId], references: [id], onDelete: Cascade)
+
+  @@index([boltSpecId])
+  @@map("bolt_images")
 }
 
 model MotorBoltRequirement {

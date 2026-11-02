@@ -208,7 +208,7 @@
           <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-zinc-700 dark:text-zinc-300">
             <tr v-for="log in auditLogs" :key="log.id" class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30">
               <td class="py-2.5 px-4 font-mono text-zinc-400 whitespace-nowrap text-[11px]">
-                {{ new Date(log.timestamp).toLocaleDateString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) }}
+                {{ formatDateTime(log.timestamp) }}
               </td>
               <td class="py-2.5 px-4 font-medium text-zinc-900 dark:text-zinc-100">
                 {{ log.user ? log.user.name : 'Sistem' }}
@@ -242,6 +242,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { formatDateTime } from '../utils/date';
 
 const auth = useAuthStore();
 const activeTab = ref('import');

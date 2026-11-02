@@ -139,14 +139,24 @@
       <!-- Metrics Row (Minimalist Obsidian Cards) -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <!-- Metric 1: Motor -->
-        <div class="bg-white dark:bg-[#121215] p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/90 shadow-sm">
-          <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-1">Kendaraan</span>
-          <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
-            {{ pickData.motorcycle.model }} {{ pickData.motorcycle.variant }}
-          </p>
-          <span class="text-[11px] text-zinc-500 font-mono block mt-0.5 truncate">
-            {{ pickData.package ? pickData.package.name : 'Matriks Standar' }}
-          </span>
+        <div class="bg-white dark:bg-[#121215] p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/90 shadow-sm flex items-center space-x-3">
+          <div
+            v-if="pickData.motorcycle.images && pickData.motorcycle.images.length > 0"
+            @click="openMotorcycleModal(pickData.motorcycle)"
+            class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shrink-0 cursor-pointer hover:border-zinc-400 transition-all"
+            title="Klik untuk melihat foto motor"
+          >
+            <img :src="pickData.motorcycle.images[0].url" :alt="pickData.motorcycle.displayName" class="w-full h-full object-cover" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block mb-0.5">Kendaraan</span>
+            <p class="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+              {{ pickData.motorcycle.model }} {{ pickData.motorcycle.variant }}
+            </p>
+            <span class="text-[11px] text-zinc-500 font-mono block mt-0.5 truncate">
+              {{ pickData.package ? pickData.package.name : 'Matriks Standar' }}
+            </span>
+          </div>
         </div>
 
         <!-- Metric 2: Total Baut -->
@@ -242,9 +252,22 @@
               >
                 <td class="py-3 px-4 font-mono text-zinc-400 text-[11px]">{{ index + 1 }}</td>
                 <td class="py-3 px-4">
-                  <span class="font-mono text-zinc-900 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded text-[11px] border border-zinc-200 dark:border-zinc-700/60">
-                    {{ item.code }}
-                  </span>
+                  <div class="flex items-center space-x-2.5">
+                    <div
+                      v-if="item.images && item.images.length > 0"
+                      @click="openBoltModal(item)"
+                      class="w-9 h-9 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 transition-all cursor-pointer shrink-0"
+                      title="Klik untuk melihat foto baut"
+                    >
+                      <img :src="item.images[0].url" :alt="item.code" class="w-full h-full object-cover" />
+                    </div>
+                    <span
+                      @click="openBoltModal(item)"
+                      class="font-mono text-zinc-900 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800/80 px-2 py-0.5 rounded text-[11px] border border-zinc-200 dark:border-zinc-700/60 cursor-pointer hover:border-zinc-400 transition-all"
+                    >
+                      {{ item.code }}
+                    </span>
+                  </div>
                 </td>
                 <td class="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100 font-mono">
                   M{{ Number(item.diameterMm) }} × {{ Number(item.lengthMm) }} mm
@@ -309,7 +332,17 @@
                   <span v-else>-</span>
                 </td>
                 <td class="py-3 px-4 font-mono text-zinc-900 dark:text-zinc-200">
-                  {{ row.boltSpec.code }}
+                  <div class="flex items-center space-x-2">
+                    <div
+                      v-if="row.boltSpec?.images && row.boltSpec.images.length > 0"
+                      @click="openBoltModal(row.boltSpec)"
+                      class="w-7 h-7 rounded bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 transition-all cursor-pointer shrink-0 overflow-hidden"
+                      title="Klik untuk melihat foto baut"
+                    >
+                      <img :src="row.boltSpec.images[0].url" :alt="row.boltSpec.code" class="w-full h-full object-cover" />
+                    </div>
+                    <span @click="openBoltModal(row.boltSpec)" class="cursor-pointer hover:underline">{{ row.boltSpec.code }}</span>
+                  </div>
                 </td>
                 <td class="py-3 px-4 text-zinc-500 font-mono text-[11px]">
                   M{{ Number(row.boltSpec.diameterMm) }} × {{ Number(row.boltSpec.lengthMm) }}
@@ -338,6 +371,23 @@
         Pilih model motor pada menu di atas untuk menghasilkan daftar baut.
       </p>
     </div>
+
+    <!-- PHOTO GALLERY MODAL -->
+    <PhotoGalleryModal
+      v-if="galleryModal.isOpen"
+      :is-open="galleryModal.isOpen"
+      :category-title="galleryModal.categoryTitle"
+      :item-title="galleryModal.itemTitle"
+      :item-subtitle="galleryModal.itemSubtitle"
+      :images="galleryModal.images"
+      :can-manage="auth.isAdmin"
+      :upload-endpoint="galleryModal.uploadEndpoint"
+      :delete-endpoint-base="galleryModal.deleteEndpointBase"
+      :primary-endpoint-base="galleryModal.primaryEndpointBase"
+      :auth-headers="auth.authHeaders"
+      @close="galleryModal.isOpen = false"
+      @updated="onGalleryUpdated"
+    />
   </div>
 </template>
 
@@ -345,6 +395,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import PhotoGalleryModal from '../components/PhotoGalleryModal.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -357,6 +408,48 @@ const isLoading = ref(false);
 const isCreatingSession = ref(false);
 const pickData = ref(null);
 const activeTab = ref('consolidated');
+
+const galleryModal = ref({
+  isOpen: false,
+  categoryTitle: '',
+  itemTitle: '',
+  itemSubtitle: '',
+  images: [],
+  uploadEndpoint: '',
+  deleteEndpointBase: '',
+  primaryEndpointBase: '',
+});
+
+const openMotorcycleModal = (motor) => {
+  galleryModal.value = {
+    isOpen: true,
+    categoryTitle: 'Foto Tipe Sepeda Motor',
+    itemTitle: motor.displayName || `${motor.brand} ${motor.model}`,
+    itemSubtitle: `${motor.brand} ${motor.model} ${motor.variant || ''}`,
+    images: motor.images || [],
+    uploadEndpoint: `/api/motorcycles/${motor.id}/images`,
+    deleteEndpointBase: `/api/motorcycles/${motor.id}/images`,
+    primaryEndpointBase: `/api/motorcycles/${motor.id}/images`,
+  };
+};
+
+const openBoltModal = (bolt) => {
+  const spec = bolt.boltSpec || bolt;
+  galleryModal.value = {
+    isOpen: true,
+    categoryTitle: 'Foto Spesifikasi Baut Titanium',
+    itemTitle: spec.code,
+    itemSubtitle: `${spec.headType || ''} M${Number(spec.diameterMm)} × ${Number(spec.lengthMm)}mm • ${spec.finish || ''}`,
+    images: spec.images || [],
+    uploadEndpoint: `/api/bolt-specs/${spec.id || spec.boltSpecId}/images`,
+    deleteEndpointBase: `/api/bolt-specs/${spec.id || spec.boltSpecId}/images`,
+    primaryEndpointBase: `/api/bolt-specs/${spec.id || spec.boltSpecId}/images`,
+  };
+};
+
+const onGalleryUpdated = (updatedImages) => {
+  galleryModal.value.images = updatedImages;
+};
 
 const hondaMotors = computed(() => motorcycles.value.filter((m) => m.brand.toLowerCase() === 'honda'));
 const yamahaMotors = computed(() => motorcycles.value.filter((m) => m.brand.toLowerCase() === 'yamaha'));

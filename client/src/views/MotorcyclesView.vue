@@ -55,6 +55,7 @@
         <table class="w-full text-left text-xs">
           <thead>
             <tr class="border-b border-zinc-100 dark:border-zinc-800 text-zinc-400 font-mono text-[10px] uppercase tracking-wider">
+              <th class="py-3 px-4 font-normal">Foto</th>
               <th class="py-3 px-4 font-normal">Merek</th>
               <th class="py-3 px-4 font-normal">Model & Varian</th>
               <th class="py-3 px-4 font-normal">Tahun Rilis</th>
@@ -69,6 +70,38 @@
               :key="m.id"
               class="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors"
             >
+              <!-- Photo Thumbnail -->
+              <td class="py-2.5 px-4">
+                <div
+                  @click="openMotorGallery(m)"
+                  class="flex items-center space-x-2 cursor-pointer group"
+                >
+                  <div
+                    class="w-10 h-10 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-200 dark:border-zinc-800 group-hover:border-zinc-500 transition-all shrink-0 flex items-center justify-center relative"
+                  >
+                    <img
+                      v-if="m.images && m.images.length > 0"
+                      :src="m.images[0].url"
+                      :alt="m.displayName"
+                      class="w-full h-full object-cover"
+                    />
+                    <svg v-else class="w-4 h-4 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <!-- Count Pill -->
+                    <span
+                      v-if="m.images && m.images.length > 1"
+                      class="absolute bottom-0.5 right-0.5 bg-black/80 text-[8px] font-mono px-1 rounded text-zinc-200"
+                    >
+                      {{ m.images.length }}
+                    </span>
+                  </div>
+                  <span class="text-[10px] font-mono text-zinc-400 group-hover:text-zinc-200 underline underline-offset-2">
+                    {{ m.images && m.images.length > 0 ? `${m.images.length} foto` : '+ Foto' }}
+                  </span>
+                </div>
+              </td>
+
               <td class="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">
                 {{ m.brand }}
               </td>
@@ -126,11 +159,21 @@
       <div class="bg-white dark:bg-[#121215] rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         <!-- Modal Header -->
         <div class="p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Matriks Baut</span>
-            <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-              {{ selectedMotorForReqs.displayName }}
-            </h2>
+          <div class="flex items-center space-x-3">
+            <div
+              v-if="selectedMotorForReqs.images && selectedMotorForReqs.images.length > 0"
+              @click="openMotorGallery(selectedMotorForReqs)"
+              class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-700 shrink-0 cursor-pointer hover:border-zinc-400 transition-all"
+              title="Klik untuk melihat semua foto motor ini"
+            >
+              <img :src="selectedMotorForReqs.images[0].url" class="w-full h-full object-cover" />
+            </div>
+            <div>
+              <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Matriks Baut</span>
+              <h2 class="text-base font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                {{ selectedMotorForReqs.displayName }}
+              </h2>
+            </div>
           </div>
           <button
             @click="selectedMotorForReqs = null"
@@ -232,8 +275,16 @@
                 <td class="py-2.5 px-3 text-zinc-400 font-mono text-[11px]">
                   {{ req.side }}
                 </td>
-                <td class="py-2.5 px-3 font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                  {{ req.boltSpec.code }}
+                <td class="py-2.5 px-3">
+                  <div class="flex items-center space-x-2">
+                    <div
+                      v-if="req.boltSpec?.images && req.boltSpec.images.length > 0"
+                      class="w-6 h-6 rounded bg-zinc-900 border border-zinc-700 overflow-hidden shrink-0"
+                    >
+                      <img :src="req.boltSpec.images[0].url" class="w-full h-full object-cover" />
+                    </div>
+                    <span class="font-mono font-bold text-zinc-900 dark:text-zinc-100">{{ req.boltSpec.code }}</span>
+                  </div>
                 </td>
                 <td class="py-2.5 px-3 text-zinc-500 font-mono">
                   M{{ Number(req.boltSpec.diameterMm) }} × {{ Number(req.boltSpec.lengthMm) }}
@@ -348,17 +399,50 @@
       </div>
     </div>
 
+    <!-- PHOTO GALLERY MODAL -->
+    <PhotoGalleryModal
+      v-if="selectedMotorForGallery"
+      :is-open="Boolean(selectedMotorForGallery)"
+      category-title="Foto Tipe Sepeda Motor"
+      :item-title="selectedMotorForGallery.displayName"
+      :item-subtitle="`${selectedMotorForGallery.brand} • ${selectedMotorForGallery.model} (${selectedMotorForGallery.yearStart}${selectedMotorForGallery.yearEnd ? `-${selectedMotorForGallery.yearEnd}` : ''})`"
+      :images="selectedMotorForGallery.images || []"
+      :can-manage="auth.isAdmin"
+      :upload-endpoint="`/api/motorcycles/${selectedMotorForGallery.id}/images`"
+      :delete-endpoint-base="`/api/motorcycles/${selectedMotorForGallery.id}/images`"
+      :primary-endpoint-base="`/api/motorcycles/${selectedMotorForGallery.id}/images`"
+      :auth-headers="auth.authHeaders"
+      @close="selectedMotorForGallery = null"
+      @updated="onMotorGalleryUpdated"
+    />
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import PhotoGalleryModal from '../components/PhotoGalleryModal.vue';
 
 const auth = useAuthStore();
 const motorcycles = ref([]);
 const search = ref('');
 const selectedBrand = ref('Semua');
+const selectedMotorForGallery = ref(null);
+
+const openMotorGallery = (motor) => {
+  selectedMotorForGallery.value = motor;
+};
+
+const onMotorGalleryUpdated = (updatedImages) => {
+  if (selectedMotorForGallery.value) {
+    selectedMotorForGallery.value.images = updatedImages;
+    const target = motorcycles.value.find((m) => m.id === selectedMotorForGallery.value.id);
+    if (target) {
+      target.images = updatedImages;
+    }
+  }
+};
 
 const selectedMotorForReqs = ref(null);
 const matrixList = ref([]);

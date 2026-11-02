@@ -13,7 +13,13 @@ router.get('/motorcycles/:id/requirements', requireAuth, async (req, res) => {
       where: { motorcycleTypeId },
       include: {
         boltPosition: true,
-        boltSpec: true,
+        boltSpec: {
+          include: {
+            images: {
+              orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+            },
+          },
+        },
       },
       orderBy: [
         { boltPosition: { sortOrder: 'asc' } },
@@ -68,7 +74,13 @@ router.post('/motorcycles/:id/requirements', requireAuth, requireAdmin, async (r
       },
       include: {
         boltPosition: true,
-        boltSpec: true,
+        boltSpec: {
+          include: {
+            images: {
+              orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+            },
+          },
+        },
       },
     });
 
@@ -106,7 +118,13 @@ router.put('/requirements/:id', requireAuth, requireAdmin, async (req, res) => {
       },
       include: {
         boltPosition: true,
-        boltSpec: true,
+        boltSpec: {
+          include: {
+            images: {
+              orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+            },
+          },
+        },
       },
     });
 

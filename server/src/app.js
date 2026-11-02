@@ -40,6 +40,13 @@ app.use('/api/import', importExportRoutes);
 app.use('/api/admin', importExportRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 
+// Serve uploaded files statically
+const uploadsPath = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsPath));
+
 // Serve Vue Frontend static build if present
 const clientDistPath = path.join(__dirname, '../../client/dist');
 if (fs.existsSync(clientDistPath)) {

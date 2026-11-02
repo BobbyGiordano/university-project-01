@@ -331,6 +331,74 @@ async function main() {
 
   console.log(`✅ Seeded packages for NMAX 155 (${pkgMesin.name}, ${pkgPengereman.name}, ${pkgFull.name})`);
 
+  // 6. Seed Photos for Bolt Specs and Motorcycles
+  console.log('📸 Seeding bolt photos and motorcycle photos...');
+
+  // Bolt Images
+  await prisma.boltImage.deleteMany();
+  const sampleBoltImages = [
+    { specCode: 'HEX-M6-25-FL', url: '/uploads/bolts/titanium-flange-hex-blue.svg', caption: 'Blue Ice Anodized Glossy', isPrimary: true },
+    { specCode: 'HEX-M6-25-FL', url: '/uploads/bolts/titanium-flange-hex-gold.svg', caption: 'Royal Gold Anodized Glossy', isPrimary: false },
+    { specCode: 'HEX-M6-25-FL', url: '/uploads/bolts/titanium-flange-hex-purple.svg', caption: 'Deep Purple Anodized Glossy', isPrimary: false },
+    { specCode: 'HEX-M6-20-FL', url: '/uploads/bolts/titanium-flange-hex-blue.svg', caption: 'Blue Ice Anodized Glossy', isPrimary: true },
+    { specCode: 'HEX-M6-20-FL', url: '/uploads/bolts/titanium-flange-hex-gold.svg', caption: 'Royal Gold Anodized Glossy', isPrimary: false },
+    { specCode: 'HEX-M8-30-FL', url: '/uploads/bolts/titanium-flange-hex-blue.svg', caption: 'Blue Ice Flange Hex M8', isPrimary: true },
+    { specCode: 'HEX-M8-30-FL', url: '/uploads/bolts/titanium-flange-hex-gold.svg', caption: 'Royal Gold Flange Hex M8', isPrimary: false },
+    { specCode: 'HEX-M8-20-FL', url: '/uploads/bolts/titanium-flange-hex-blue.svg', caption: 'Blue Ice Disc Rotor Spec', isPrimary: true },
+    { specCode: 'HEX-M8-20-FL', url: '/uploads/bolts/titanium-flange-hex-purple.svg', caption: 'Deep Purple Disc Rotor Spec', isPrimary: false },
+    { specCode: 'BTN-M6-16-DO', url: '/uploads/bolts/titanium-button-head-doff.svg', caption: 'Raw Matte Titanium Doff (Windshield)', isPrimary: true },
+    { specCode: 'BTN-M6-16-DO', url: '/uploads/bolts/titanium-flange-hex-blue.svg', caption: 'Alternatif Warna Blue Ice', isPrimary: false },
+    { specCode: 'BTN-M5-15-DO', url: '/uploads/bolts/titanium-button-head-doff.svg', caption: 'Button Head Doff M5', isPrimary: true },
+  ];
+
+  for (const img of sampleBoltImages) {
+    if (specsMap[img.specCode]) {
+      await prisma.boltImage.create({
+        data: {
+          boltSpecId: specsMap[img.specCode].id,
+          url: img.url,
+          caption: img.caption,
+          isPrimary: img.isPrimary,
+        },
+      });
+    }
+  }
+
+  // Motorcycle Images
+  await prisma.motorcycleImage.deleteMany();
+  if (nmax) {
+    await prisma.motorcycleImage.createMany({
+      data: [
+        { motorcycleTypeId: nmax.id, url: '/uploads/motorcycles/yamaha-nmax-155.svg', caption: 'Tampak Samping Kiri (Titik CVT & Bodi)', isPrimary: true },
+        { motorcycleTypeId: nmax.id, url: '/uploads/motorcycles/yamaha-aerox-155.svg', caption: 'Area Pengereman Depan & Master Rem', isPrimary: false },
+      ],
+    });
+  }
+
+  if (vario160) {
+    await prisma.motorcycleImage.create({
+      data: {
+        motorcycleTypeId: vario160.id,
+        url: '/uploads/motorcycles/honda-vario-160.svg',
+        caption: 'Tampak Samping Kiri & Bak Mesin eSP+',
+        isPrimary: true,
+      },
+    });
+  }
+
+  if (aerox) {
+    await prisma.motorcycleImage.create({
+      data: {
+        motorcycleTypeId: aerox.id,
+        url: '/uploads/motorcycles/yamaha-aerox-155.svg',
+        caption: 'Tampak Samping Kiri Sport Matic VVA',
+        isPrimary: true,
+      },
+    });
+  }
+
+  console.log('✅ Seeded sample photos for bolt specs and motorcycles.');
+
   console.log('🎉 Seeding successfully completed!');
 }
 

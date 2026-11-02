@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#854d0e"/>
+    </linearGradient>
+    <linearGradient id="goldSheen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="#09090b" rx="16"/>
+  <path d="M 120 160 L 160 110 L 220 110 L 260 160 L 240 240 L 140 240 Z" fill="url(#goldGrad)"/>
+  <rect x="110" y="240" width="160" height="24" rx="6" fill="#ca8a04"/>
+  <rect x="110" y="240" width="160" height="24" rx="6" fill="url(#goldSheen)"/>
+  
+  <rect x="150" y="264" width="80" height="110" fill="url(#goldGrad)"/>
+  <rect x="150" y="264" width="80" height="110" fill="url(#goldSheen)"/>
+  
+  <g stroke="#a16207" stroke-width="4" stroke-linecap="round">
+    <line x1="145" y1="285" x2="235" y2="295"/>
+    <line x1="145" y1="305" x2="235" y2="315"/>
+    <line x1="145" y1="325" x2="235" y2="335"/>
+    <line x1="145" y1="345" x2="235" y2="355"/>
+    <line x1="145" y1="365" x2="235" y2="372"/>
+  </g>
+  
+  <g transform="translate(320, 110)">
+    <rect width="240" height="200" rx="12" fill="#121215" stroke="#27272a" stroke-width="1.5"/>
+    <text x="24" y="45" fill="#eab308" font-family="system-ui, sans-serif" font-weight="700" font-size="14" letter-spacing="1">HEX TITANIUM SPEC</text>
+    <text x="24" y="80" fill="#ffffff" font-family="monospace" font-weight="800" font-size="20">ROYAL GOLD</text>
+    <text x="24" y="112" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="13">Grade: Ti-6Al-4V (Grade 5)</text>
+    <text x="24" y="136" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="13">Color: Gold Mirror Sheen</text>
+    <text x="24" y="160" fill="#a1a1aa" font-family="system-ui, sans-serif" font-size="13">Finish: Anodized High Gloss</text>
+    <rect x="24" y="174" width="70" height="6" rx="3" fill="#eab308"/>
+  </g>
+</svg>
+

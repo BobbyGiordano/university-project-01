@@ -164,4 +164,66 @@ describe('Hex Titanium Bolt System API Tests', () => {
     assert.equal(patchRes.data.sessionStatus, 'COMPLETED');
     assert.equal(patchRes.data.isAllChecked, true);
   });
+
+  test('7. Multi-photo gallery: add photo, set primary, delete photo for bolt and motorcycle', async () => {
+    // 1. Get a bolt spec
+    const { data: specs } = await apiRequest('/api/bolt-specs', { token: adminToken });
+    assert.ok(specs.length > 0);
+    const targetSpec = specs[0];
+
+    // Add photo to bolt spec
+    const addBoltPhoto = await apiRequest(`/api/bolt-specs/${targetSpec.id}/images`, {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        url: '/uploads/bolts/test-bolt-photo.svg',
+        caption: 'Uji Coba Anodize Biru Glossy',
+        isPrimary: false,
+      },
+    });
+    assert.equal(addBoltPhoto.status, 201);
+    const createdBoltImg = addBoltPhoto.data.find((img) => img.caption === 'Uji Coba Anodize Biru Glossy');
+    assert.ok(createdBoltImg);
+
+    // Set as primary
+    const setPrimaryBolt = await apiRequest(`/api/bolt-specs/${targetSpec.id}/images/${createdBoltImg.id}/primary`, {
+      method: 'PATCH',
+      token: adminToken,
+    });
+    assert.equal(setPrimaryBolt.status, 200);
+    const updatedBoltImg = setPrimaryBolt.data.find((img) => img.id === createdBoltImg.id);
+    assert.equal(updatedBoltImg.isPrimary, true);
+
+    // Delete bolt photo
+    const deleteBoltPhoto = await apiRequest(`/api/bolt-specs/${targetSpec.id}/images/${createdBoltImg.id}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+    assert.equal(deleteBoltPhoto.status, 200);
+
+    // 2. Get a motorcycle
+    const { data: motors } = await apiRequest('/api/motorcycles', { token: adminToken });
+    const targetMotor = motors[0];
+
+    // Add photo to motorcycle
+    const addMotorPhoto = await apiRequest(`/api/motorcycles/${targetMotor.id}/images`, {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        url: '/uploads/motorcycles/test-bike.svg',
+        caption: 'Tampak Depan Visor Sport',
+        isPrimary: false,
+      },
+    });
+    assert.equal(addMotorPhoto.status, 201);
+    const createdMotorImg = addMotorPhoto.data.find((img) => img.caption === 'Tampak Depan Visor Sport');
+    assert.ok(createdMotorImg);
+
+    // Delete motorcycle photo
+    const deleteMotorPhoto = await apiRequest(`/api/motorcycles/${targetMotor.id}/images/${createdMotorImg.id}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+    assert.equal(deleteMotorPhoto.status, 200);
+  });
 });
