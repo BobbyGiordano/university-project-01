@@ -6,17 +6,103 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Starting Hex Titanium Database Seeding...');
 
-  // 1. Seed Users
+  // 1. Seed Dynamic Permissions
+  const permissionsData = [
+    { code: 'USERS_MANAGE', name: 'Manajemen Pengguna & Password', category: 'Pengguna', description: 'Membuat akun, reset password, dan mengubah status pengguna' },
+    { code: 'ROLES_MANAGE', name: 'Manajemen Peran & Hak Akses (RBAC)', category: 'Pengguna', description: 'Membuat peran kustom dan mengatur izin aksesnya' },
+    { code: 'MOTORCYCLES_MANAGE', name: 'Kelola Master 20 Tipe Motor & Matriks Baut', category: 'Master Data', description: 'Menambah, mengubah, dan memetakan baut pada motor' },
+    { code: 'BOLTS_MANAGE', name: 'Kelola Master Spesifikasi Baut & Finishing', category: 'Master Data', description: 'Menambah dan mengubah standar dimensi baut' },
+    { code: 'PACKAGES_MANAGE', name: 'Kelola Paket Bundling Baut', category: 'Master Data', description: 'Mengatur formula paket Mesin, Pengereman, dan Full Bike' },
+    { code: 'MEDIA_UPLOAD', name: 'Unggah & Hapus Galeri Foto', category: 'Media', description: 'Mengunggah foto spesifikasi baut dan tipe motor' },
+    { code: 'CSV_IMPORT_EXPORT', name: 'Impor & Ekspor Data Massal (CSV)', category: 'Data', description: 'Mengimpor matriks kebutuhan baut melalui file CSV' },
+    { code: 'SYSTEM_BACKUP_RESTORE', name: 'Pencadangan (Backup) & Pemulihan (Restore)', category: 'Sistem', description: 'Mengunduh dump JSON offline dan memulihkan database' },
+    { code: 'AUDIT_LOG_VIEW', name: 'Melihat Catatan Audit Keamanan', category: 'Sistem', description: 'Melihat jejak log aktivitas seluruh pengguna' },
+    { code: 'PICKLIST_GENERATE', name: 'Buat & Cetak Daftar Ambil Baut (Pick-List)', category: 'Operasional', description: 'Menghasilkan konsolidasi baut dan mencetak nota SPK' },
+    { code: 'SESSION_CHECKLIST', name: 'Jalankan Sesi Ambil Baut Interaktif (HP Android)', category: 'Operasional', description: 'Mencentang baut terambil di depan laci rak' },
+  ];
+
+  const permissionsMap = {};
+  for (const p of permissionsData) {
+    const record = await prisma.permission.upsert({
+      where: { code: p.code },
+      update: p,
+      create: p,
+    });
+    permissionsMap[p.code] = record;
+  }
+  console.log(`✅ Seeded ${permissionsData.length} dynamic system permissions.`);
+
+  // 2. Seed Dynamic Roles
+  const rolesData = [
+    {
+      name: 'ADMIN',
+      displayName: 'Owner / Administrator',
+      description: 'Akses penuh tanpa batas ke seluruh konfigurasi gerai, master data, dan pemeliharaan.',
+      isSystem: true,
+      permissionCodes: permissionsData.map((p) => p.code),
+    },
+    {
+      name: 'STAFF',
+      displayName: 'Staf Gerai / Kasir',
+      description: 'Pelayan toko: pencarian motor, pembuatan pick-list baut, dan checklist penyiapan rak.',
+      isSystem: false,
+      permissionCodes: ['PICKLIST_GENERATE', 'SESSION_CHECKLIST'],
+    },
+    {
+      name: 'TECHNICIAN',
+      displayName: 'Teknisi / Mekanik Bengkel',
+      description: 'Mekanik bengkel: inspeksi titik pemasangan baut pada unit motor dan checklist perakitan.',
+      isSystem: false,
+      permissionCodes: ['PICKLIST_GENERATE', 'SESSION_CHECKLIST'],
+    },
+  ];
+
+  const rolesMap = {};
+  for (const r of rolesData) {
+    const roleRecord = await prisma.role.upsert({
+      where: { name: r.name },
+      update: {
+        displayName: r.displayName,
+        description: r.description,
+        isSystem: r.isSystem,
+      },
+      create: {
+        name: r.name,
+        displayName: r.displayName,
+        description: r.description,
+        isSystem: r.isSystem,
+      },
+    });
+
+    // Sync permissions
+    await prisma.rolePermission.deleteMany({ where: { roleId: roleRecord.id } });
+    for (const code of r.permissionCodes) {
+      if (permissionsMap[code]) {
+        await prisma.rolePermission.create({
+          data: {
+            roleId: roleRecord.id,
+            permissionId: permissionsMap[code].id,
+          },
+        });
+      }
+    }
+    rolesMap[r.name] = roleRecord;
+  }
+  console.log(`✅ Seeded ${rolesData.length} roles with permission mappings.`);
+
+  // 3. Seed Users
   const passwordHashAdmin = await bcrypt.hash('admin123', 10);
   const passwordHashStaff = await bcrypt.hash('staff123', 10);
+  const passwordHashTech = await bcrypt.hash('tech123', 10);
 
   const adminUser = await prisma.user.upsert({
     where: { username: 'admin' },
-    update: { passwordHash: passwordHashAdmin },
+    update: { passwordHash: passwordHashAdmin, roleId: rolesMap['ADMIN'].id, role: 'ADMIN' },
     create: {
       username: 'admin',
       passwordHash: passwordHashAdmin,
       name: 'Aldi (Owner / Admin)',
+      roleId: rolesMap['ADMIN'].id,
       role: 'ADMIN',
       isActive: true,
     },
@@ -24,17 +110,31 @@ async function main() {
 
   const staffUser = await prisma.user.upsert({
     where: { username: 'staff' },
-    update: { passwordHash: passwordHashStaff },
+    update: { passwordHash: passwordHashStaff, roleId: rolesMap['STAFF'].id, role: 'STAFF' },
     create: {
       username: 'staff',
       passwordHash: passwordHashStaff,
       name: 'Budi (Staf Gerai)',
+      roleId: rolesMap['STAFF'].id,
       role: 'STAFF',
       isActive: true,
     },
   });
 
-  console.log('✅ Users seeded:', adminUser.username, staffUser.username);
+  const techUser = await prisma.user.upsert({
+    where: { username: 'montir' },
+    update: { passwordHash: passwordHashTech, roleId: rolesMap['TECHNICIAN'].id, role: 'TECHNICIAN' },
+    create: {
+      username: 'montir',
+      passwordHash: passwordHashTech,
+      name: 'Joko (Teknisi Bengkel)',
+      roleId: rolesMap['TECHNICIAN'].id,
+      role: 'TECHNICIAN',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Users seeded:', adminUser.username, staffUser.username, techUser.username);
 
   // 2. Seed Bolt Positions
   const positionsData = [

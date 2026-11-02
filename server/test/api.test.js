@@ -226,4 +226,150 @@ describe('Hex Titanium Bolt System API Tests', () => {
     });
     assert.equal(deleteMotorPhoto.status, 200);
   });
+
+  test('8. Admin User Management and RBAC permissions', async () => {
+    // 1. Staff cannot access /api/users (RBAC check)
+    const staffAccess = await apiRequest('/api/users', { token: staffToken });
+    assert.equal(staffAccess.status, 403);
+
+    // 2. Authenticated user can fetch RBAC matrix
+    const rbacRes = await apiRequest('/api/users/rbac-matrix', { token: staffToken });
+    assert.equal(rbacRes.status, 200);
+    assert.ok(rbacRes.data.ADMIN);
+    assert.ok(rbacRes.data.STAFF);
+    assert.ok(rbacRes.data.TECHNICIAN);
+
+    // 3. Admin can list users
+    const listRes = await apiRequest('/api/users', { token: adminToken });
+    assert.equal(listRes.status, 200);
+    assert.ok(Array.isArray(listRes.data));
+    assert.ok(listRes.data.length >= 2);
+
+    // 4. Admin creates new user
+    const testUsername = `user_test_${Date.now()}`;
+    const createRes = await apiRequest('/api/users', {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        username: testUsername,
+        password: 'password123',
+        name: 'Teknisi Baru Testing',
+        role: 'TECHNICIAN',
+      },
+    });
+    assert.equal(createRes.status, 201);
+    const createdUser = createRes.data;
+    assert.equal(createdUser.username, testUsername);
+    assert.equal(createdUser.role, 'TECHNICIAN');
+
+    // 5. Admin updates user
+    const updateRes = await apiRequest(`/api/users/${createdUser.id}`, {
+      method: 'PUT',
+      token: adminToken,
+      body: {
+        name: 'Teknisi Senior Testing',
+        role: 'STAFF',
+      },
+    });
+    assert.equal(updateRes.status, 200);
+    assert.equal(updateRes.data.name, 'Teknisi Senior Testing');
+    assert.equal(updateRes.data.role, 'STAFF');
+
+    // 6. Admin toggles status
+    const statusRes = await apiRequest(`/api/users/${createdUser.id}/status`, {
+      method: 'PATCH',
+      token: adminToken,
+    });
+    assert.equal(statusRes.status, 200);
+    assert.equal(statusRes.data.isActive, false);
+
+    // 7. Admin cannot deactivate own account
+    const adminUser = listRes.data.find((u) => u.username === 'admin');
+    const selfDeactivate = await apiRequest(`/api/users/${adminUser.id}/status`, {
+      method: 'PATCH',
+      token: adminToken,
+    });
+    assert.equal(selfDeactivate.status, 400);
+
+    // 8. Admin deletes user
+    const deleteRes = await apiRequest(`/api/users/${createdUser.id}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+    assert.equal(deleteRes.status, 200);
+  });
+
+  test('9. Dynamic custom role creation and access permissions (non-hardcoded)', async () => {
+    // 1. Fetch available permissions
+    const permsRes = await apiRequest('/api/roles/permissions', { token: adminToken });
+    assert.equal(permsRes.status, 200);
+    assert.ok(permsRes.data.length >= 10);
+
+    // 2. Create custom role
+    const customRoleName = `ROLE_QC_${Date.now()}`;
+    const createRoleRes = await apiRequest('/api/roles', {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        name: customRoleName,
+        displayName: 'Quality Control Gerai',
+        description: 'Pemeriksa kualitas baut dan kepatuhan standar teknis',
+        permissionCodes: ['PICKLIST_GENERATE', 'SESSION_CHECKLIST', 'BOLTS_MANAGE'],
+      },
+    });
+    assert.equal(createRoleRes.status, 201);
+    const createdRole = createRoleRes.data;
+    assert.equal(createdRole.name, customRoleName);
+    assert.equal(createdRole.permissionCodes.length, 3);
+    assert.ok(createdRole.permissionCodes.includes('BOLTS_MANAGE'));
+
+    // 3. Update permissions of custom role
+    const updateRoleRes = await apiRequest(`/api/roles/${createdRole.id}`, {
+      method: 'PUT',
+      token: adminToken,
+      body: {
+        displayName: 'Quality Control & Visual Inspector',
+        permissionCodes: ['PICKLIST_GENERATE', 'SESSION_CHECKLIST', 'BOLTS_MANAGE', 'MEDIA_UPLOAD'],
+      },
+    });
+    assert.equal(updateRoleRes.status, 200);
+    assert.equal(updateRoleRes.data.permissionCodes.length, 4);
+    assert.ok(updateRoleRes.data.permissionCodes.includes('MEDIA_UPLOAD'));
+
+    // 4. Create user assigned to this dynamic role
+    const customUserRes = await apiRequest('/api/users', {
+      method: 'POST',
+      token: adminToken,
+      body: {
+        username: `qc_staff_${Date.now()}`,
+        password: 'password123',
+        name: 'Staf QC Khusus',
+        roleId: createdRole.id,
+      },
+    });
+    assert.equal(customUserRes.status, 201);
+    const customUser = customUserRes.data;
+    assert.equal(customUser.roleId, createdRole.id);
+    assert.equal(customUser.role, customRoleName);
+
+    // 5. Deleting custom role while user assigned should fail
+    const deleteRoleFail = await apiRequest(`/api/roles/${createdRole.id}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+    assert.equal(deleteRoleFail.status, 400);
+
+    // 6. Delete user then delete custom role
+    const deleteUserRes = await apiRequest(`/api/users/${customUser.id}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+    assert.equal(deleteUserRes.status, 200);
+
+    const deleteRoleSuccess = await apiRequest(`/api/roles/${createdRole.id}`, {
+      method: 'DELETE',
+      token: adminToken,
+    });
+    assert.equal(deleteRoleSuccess.status, 200);
+  });
 });
