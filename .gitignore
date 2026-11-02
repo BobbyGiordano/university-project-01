@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+data/postgres/
+*.log
+.DS_Store
+
+Paper.pdf

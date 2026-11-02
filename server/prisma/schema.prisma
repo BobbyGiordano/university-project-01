@@ -1,0 +1,160 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  username     String        @unique
+  passwordHash String        @map("password_hash")
+  name         String
+  role         String        @default("STAFF") // ADMIN, STAFF, TECHNICIAN
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  pickSessions PickSession[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model MotorcycleType {
+  id           Int                    @id @default(autoincrement())
+  brand        String                 // Honda, Yamaha, Suzuki, Kawasaki
+  model        String
+  variant      String
+  yearStart    Int                    @map("year_start")
+  yearEnd      Int?                   @map("year_end")
+  displayName  String                 @map("display_name")
+  notes        String?
+  isActive     Boolean                @default(true) @map("is_active")
+  createdAt    DateTime               @default(now()) @map("created_at")
+  requirements MotorBoltRequirement[]
+  packages     Package[]
+  pickSessions PickSession[]
+
+  @@unique([brand, model, variant, yearStart, yearEnd])
+  @@map("motorcycle_types")
+}
+
+model BoltPosition {
+  id           Int                    @id @default(autoincrement())
+  name         String                 @unique
+  category     String                 // Mesin, Bodi, Pengereman, Rangka, dll.
+  sortOrder    Int                    @default(0) @map("sort_order")
+  notes        String?
+  requirements MotorBoltRequirement[]
+
+  @@map("bolt_positions")
+}
+
+model BoltSpec {
+  id           Int                    @id @default(autoincrement())
+  code         String                 @unique
+  diameterMm   Decimal                @map("diameter_mm") @db.Decimal(5, 2)
+  lengthMm     Decimal                @map("length_mm") @db.Decimal(6, 2)
+  headType     String                 @map("head_type") // Flange Hex, Button, Taper, dll.
+  threadPitch  String?                @map("thread_pitch") // e.g. 1.0, 1.25
+  material     String                 @default("Titanium Gr5")
+  finish       String                 @default("Glossy") // Glossy, Doff
+  notes        String?
+  requirements MotorBoltRequirement[]
+  packageItems PackageItem[]
+  sessionItems PickSessionItem[]
+
+  @@map("bolt_specs")
+}
+
+model MotorBoltRequirement {
+  id               Int            @id @default(autoincrement())
+  motorcycleTypeId Int            @map("motorcycle_type_id")
+  boltPositionId   Int            @map("bolt_position_id")
+  boltSpecId       Int            @map("bolt_spec_id")
+  quantity         Int
+  side             String         @default("NONE") // LEFT, RIGHT, FRONT, REAR, NONE
+  isOptional       Boolean        @default(false) @map("is_optional")
+  sortOrder        Int            @default(0) @map("sort_order")
+  notes            String?
+  motorcycleType   MotorcycleType @relation(fields: [motorcycleTypeId], references: [id], onDelete: Cascade)
+  boltPosition     BoltPosition   @relation(fields: [boltPositionId], references: [id], onDelete: Restrict)
+  boltSpec         BoltSpec       @relation(fields: [boltSpecId], references: [id], onDelete: Restrict)
+  packageItems     PackageItem[]
+
+  @@unique([motorcycleTypeId, boltPositionId, boltSpecId, side])
+  @@map("motor_bolt_requirements")
+}
+
+model Package {
+  id               Int            @id @default(autoincrement())
+  motorcycleTypeId Int            @map("motorcycle_type_id")
+  packageType      String         @map("package_type") // Mesin, Bodi, Full Bike
+  name             String
+  description      String?
+  status           String         @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt        DateTime       @default(now()) @map("created_at")
+  motorcycleType   MotorcycleType @relation(fields: [motorcycleTypeId], references: [id], onDelete: Cascade)
+  items            PackageItem[]
+  pickSessions     PickSession[]
+
+  @@map("packages")
+}
+
+model PackageItem {
+  id                  Int                    @id @default(autoincrement())
+  packageId           Int                    @map("package_id")
+  boltSpecId          Int                    @map("bolt_spec_id")
+  sourceRequirementId Int?                   @map("source_requirement_id")
+  quantity            Int
+  emblemNote          String?                @map("emblem_note")
+  package             Package                @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  boltSpec            BoltSpec               @relation(fields: [boltSpecId], references: [id], onDelete: Restrict)
+  sourceRequirement   MotorBoltRequirement?  @relation(fields: [sourceRequirementId], references: [id], onDelete: SetNull)
+
+  @@map("package_items")
+}
+
+model PickSession {
+  id               Int               @id @default(autoincrement())
+  motorcycleTypeId Int               @map("motorcycle_type_id")
+  packageId        Int?              @map("package_id")
+  createdBy        Int               @map("created_by")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  status           String            @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED
+  notes            String?
+  motorcycleType   MotorcycleType    @relation(fields: [motorcycleTypeId], references: [id], onDelete: Restrict)
+  package          Package?          @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  creator          User              @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  items            PickSessionItem[]
+
+  @@map("pick_sessions")
+}
+
+model PickSessionItem {
+  id              Int         @id @default(autoincrement())
+  pickSessionId   Int         @map("pick_session_id")
+  boltSpecId      Int         @map("bolt_spec_id")
+  quantity        Int
+  positionSummary String      @map("position_summary") // e.g. "Cover Mesin (4), Kaliper (2)"
+  checked         Boolean     @default(false)
+  pickSession     PickSession @relation(fields: [pickSessionId], references: [id], onDelete: Cascade)
+  boltSpec        BoltSpec    @relation(fields: [boltSpecId], references: [id], onDelete: Restrict)
+
+  @@map("pick_session_items")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String   // LOGIN, CREATE, UPDATE, DELETE, IMPORT, RESTORE, PICK_LIST
+  entity    String   // MOTORCYCLE, REQUIREMENT, BOLT_SPEC, POSITION, PACKAGE, PICK_SESSION, SYSTEM
+  entityId  Int?     @map("entity_id")
+  timestamp DateTime @default(now())
+  detail    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
