@@ -70,7 +70,7 @@
           <button
             @click="pickThisPackage(pkg)"
             type="button"
-            class="w-full py-2 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-medium text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 transition-colors cursor-pointer"
+            class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-950 font-semibold text-xs rounded-xl shadow-sm transition-all duration-150 cursor-pointer"
           >
             Pilih Paket &rarr;
           </button>

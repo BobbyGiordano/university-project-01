@@ -110,7 +110,7 @@
             @click="generatePickList"
             :disabled="!selectedMotorcycleId || isLoading"
             type="button"
-            class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-white font-medium text-xs rounded-xl border border-zinc-800 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-40 text-center"
+            class="w-full py-2 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-950 font-semibold text-xs rounded-xl shadow-sm transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-center"
           >
             <span v-if="isLoading">Memuat...</span>
             <span v-else>Tampilkan</span>
