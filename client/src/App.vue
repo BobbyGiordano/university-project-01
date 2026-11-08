@@ -27,9 +27,14 @@
           <p class="font-medium">
             Hex Titanium &bull; Banguntapan, Bantul, Yogyakarta
           </p>
-          <p class="text-[11px] text-zinc-400 dark:text-zinc-600 font-mono">
-            Local Shop Operations &bull; Program 1
-          </p>
+          <div class="flex items-center gap-3 text-[11px] text-zinc-400 dark:text-zinc-600 font-mono">
+            <span>Local Shop Operations &bull; Program 1</span>
+            <span>&bull;</span>
+            <span class="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
+              <span class="w-1.5 h-1.5 rounded-full" :class="isBackendOnline ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+              Backend Port: <strong class="font-bold text-zinc-800 dark:text-zinc-200">{{ backendPort }}</strong>
+            </span>
+          </div>
         </div>
       </footer>
     </div>
@@ -41,11 +46,13 @@ import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
 import { useTheme } from './composables/useTheme';
+import { useSystemInfo } from './composables/useSystemInfo';
 import { useAuthStore } from './stores/auth';
 
 const route = useRoute();
 const auth = useAuthStore();
 const { initTheme } = useTheme();
+const { backendPort, isBackendOnline } = useSystemInfo();
 
 const showSidebar = computed(() => {
   return auth.isAuthenticated && route.name !== 'login';

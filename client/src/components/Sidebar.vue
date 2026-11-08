@@ -25,7 +25,11 @@
         </router-link>
       </div>
 
-      <div class="flex items-center space-x-1">
+      <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+          <span class="w-1.5 h-1.5 rounded-full" :class="isBackendOnline ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+          <span>Port: {{ backendPort }}</span>
+        </div>
         <ThemeToggle />
       </div>
     </header>
@@ -54,9 +58,16 @@
               <span class="font-bold text-xs tracking-wider uppercase text-zinc-900 dark:text-zinc-100 block leading-tight">
                 HEX TITANIUM
               </span>
-              <span class="text-[9px] font-mono uppercase text-zinc-400">
-                LAN OPERATIONS
-              </span>
+              <div class="flex items-center space-x-1.5 mt-0.5">
+                <span class="text-[9px] font-mono uppercase text-zinc-400">
+                  LAN OPERATIONS
+                </span>
+                <span class="text-zinc-300 dark:text-zinc-700">&bull;</span>
+                <span class="inline-flex items-center space-x-1 text-[9px] font-mono text-zinc-500 dark:text-zinc-400">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="isBackendOnline ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+                  <span>:{{ backendPort }}</span>
+                </span>
+              </div>
             </div>
           </router-link>
 
@@ -179,6 +190,14 @@
           <ThemeToggle />
         </div>
 
+        <div class="flex items-center justify-between text-[10px] font-mono text-zinc-400 dark:text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800/60 mb-2">
+          <span>Backend Port</span>
+          <span class="inline-flex items-center gap-1 font-semibold" :class="isBackendOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'">
+            <span class="w-1.5 h-1.5 rounded-full" :class="isBackendOnline ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+            Port {{ backendPort }}
+          </span>
+        </div>
+
         <button
           @click="handleLogout"
           type="button"
@@ -198,11 +217,13 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useSystemInfo } from '../composables/useSystemInfo';
 import ThemeToggle from './ThemeToggle.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
 const isMobileOpen = ref(false);
+const { backendPort, isBackendOnline } = useSystemInfo();
 
 const handleLogout = () => {
   isMobileOpen.value = false;

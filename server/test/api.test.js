@@ -37,10 +37,11 @@ async function apiRequest(path, { method = 'GET', body, token } = {}) {
 }
 
 describe('Hex Titanium Bolt System API Tests', () => {
-  test('1. GET /api/health should return ok', async () => {
+  test('1. GET /api/health should return ok and backend port', async () => {
     const { status, data } = await apiRequest('/api/health');
     assert.equal(status, 200);
     assert.equal(data.status, 'ok');
+    assert.ok(data.port);
   });
 
   test('2. Auth login: valid and invalid credentials', async () => {

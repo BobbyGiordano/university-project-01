@@ -20,6 +20,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log('====================================================');
   console.log('🚀 Hex Titanium Bolt Specification Web System');
   console.log(`📍 Server lokal aktif di: http://localhost:${PORT}`);
+  console.log(`🔌 Backend Port: ${PORT}`);
   if (localIps.length > 0) {
     console.log('📱 Akses dari smartphone staf / kasir via Wi-Fi toko:');
     localIps.forEach((ip) => {

@@ -5,9 +5,9 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div class="flex items-center space-x-2 mb-1">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span class="w-1.5 h-1.5 rounded-full" :class="isBackendOnline ? 'bg-emerald-500' : 'bg-rose-500'"></span>
             <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-              Hex Titanium Operations
+              Hex Titanium Operations &bull; Backend Port: <strong class="text-zinc-700 dark:text-zinc-200">{{ backendPort }}</strong>
             </span>
           </div>
           <h1 class="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
@@ -206,9 +206,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '../stores/auth';
+import { useSystemInfo } from '../composables/useSystemInfo';
 import { formatDateTime } from '../utils/date';
 
 const auth = useAuthStore();
+const { backendPort, isBackendOnline } = useSystemInfo();
 const motorcycles = ref([]);
 const recentSessions = ref([]);
 const boltSpecsCount = ref(0);

@@ -22,6 +22,10 @@
         <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           Masuk ke basis data spesifikasi baut sepeda motor
         </p>
+        <div class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/60 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+          <span class="w-2 h-2 rounded-full" :class="isBackendOnline ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+          <span>Backend Port: <strong class="font-bold text-zinc-900 dark:text-zinc-100">{{ backendPort }}</strong></span>
+        </div>
       </div>
 
       <!-- Login Form -->
@@ -95,10 +99,12 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import { useSystemInfo } from '../composables/useSystemInfo';
 import ThemeToggle from '../components/ThemeToggle.vue';
 
 const router = useRouter();
 const auth = useAuthStore();
+const { backendPort, isBackendOnline } = useSystemInfo();
 
 const username = ref('');
 const password = ref('');

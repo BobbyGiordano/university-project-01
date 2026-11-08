@@ -4,6 +4,8 @@
   "description": "Hex Titanium Local Web-Based Bolt Specification System",
   "scripts": {
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "up": "docker compose up --build",
+    "down": "docker compose down",
     "db:up": "docker compose up -d",
     "db:migrate": "cd server && npx prisma migrate dev",
     "db:push": "cd server && npx prisma db push",

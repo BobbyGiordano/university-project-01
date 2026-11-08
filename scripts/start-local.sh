@@ -10,7 +10,7 @@ echo "=========================================================="
 
 # 1. Pastikan Docker PostgreSQL Aktif
 echo "🐘 Memeriksa basis data PostgreSQL..."
-docker compose up -d
+docker compose up -d postgres
 
 # 2. Periksa apakah frontend telah dibangun
 if [ ! -d "client/dist" ]; then
