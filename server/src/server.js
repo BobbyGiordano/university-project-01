@@ -17,17 +17,19 @@ function getLocalIpAddresses() {
 
 const server = app.listen(PORT, HOST, () => {
   const localIps = getLocalIpAddresses();
-  console.log('====================================================');
+  console.log('\n====================================================');
   console.log('🚀 Hex Titanium Bolt Specification Web System');
-  console.log(`📍 Server lokal aktif di: http://localhost:${PORT}`);
-  console.log(`🔌 Backend Port: ${PORT}`);
+  console.log('====================================================');
+  console.log(`  ➜  Local UI:    http://localhost:${PORT}/`);
+  console.log(`  ➜  Backend API: http://localhost:${PORT}/api`);
+  console.log(`  ➜  Backend Port: ${PORT}`);
   if (localIps.length > 0) {
-    console.log('📱 Akses dari smartphone staf / kasir via Wi-Fi toko:');
+    console.log('  📱 Akses LAN / Wi-Fi Toko:');
     localIps.forEach((ip) => {
-      console.log(`   👉 http://${ip}:${PORT}`);
+      console.log(`     👉 http://${ip}:${PORT}/`);
     });
   }
-  console.log('====================================================');
+  console.log('====================================================\n');
 });
 
 module.exports = server;

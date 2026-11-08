@@ -34,8 +34,10 @@ echo "🌱 Running database seeding..."
 node prisma/seed.js || true
 
 echo "=========================================================="
-echo "🔌 Hex Titanium Backend Port: ${PORT:-3000}"
-echo "🌐 UI accessible at: http://localhost:${PORT:-3000}"
+echo "🚀 Hex Titanium System Ready!"
+echo "  ➜  Local UI:    http://localhost:${PORT:-3000}/"
+echo "  ➜  Backend API: http://localhost:${PORT:-3000}/api"
+echo "  ➜  Backend Port: ${PORT:-3000}"
 echo "=========================================================="
 
 exec "$@"
